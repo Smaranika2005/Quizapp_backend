@@ -29,11 +29,48 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByIdentifier(request.getIdentifier());
+    public void signup(User user) {
+        if (user.getIdentifier() == null || user.getIdentifier().trim().isEmpty()) {
+            throw new IllegalArgumentException("Identifier is required");
+        }
+        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        if (user.getPassword().length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters long");
+        }
 
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new AuthenticationFailureException("Invalid credentials");
+        User existingUser = userRepository.findByIdentifier(user.getIdentifier().trim());
+        if (existingUser != null) {
+            throw new IllegalArgumentException("User already registered");
+        }
+
+        if (user.getRole() == null || user.getRole().isBlank()) {
+            user.setRole("STUDENT");
+        } else {
+            user.setRole(user.getRole().trim().toUpperCase());
+        }
+
+        user.setIdentifier(user.getIdentifier().trim());
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
+    }
+
+    public AuthResponse login(LoginRequest request) {
+        String identifier = request.getIdentifier() == null ? "" : request.getIdentifier().trim();
+
+        if (identifier.isEmpty() || request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new AuthenticationFailureException("Identifier and password are required");
+        }
+
+        User user = userRepository.findByIdentifier(identifier);
+
+        if (user == null) {
+            throw new AuthenticationFailureException("User not registered");
+        }
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new AuthenticationFailureException("Invalid credentials"); // Maps directly to requested responses
         }
 
         return createAuthResponse(user.getIdentifier(), user.getRole());
@@ -49,6 +86,7 @@ public class AuthService {
     private AuthResponse createAuthResponse(String username, String role) {
         String accessToken = jwtUtil.generateAccessToken(username, role);
         String refreshToken = refreshTokenService.issueRefreshToken(username);
-        return new AuthResponse(accessToken, refreshToken);
+        String normalizedRole = role == null ? null : role.toUpperCase();
+        return new AuthResponse(accessToken, refreshToken, username, normalizedRole);
     }
 }

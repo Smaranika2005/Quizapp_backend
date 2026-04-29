@@ -5,6 +5,8 @@ public class AuthResponse {
     private String accessToken;
     private String refreshToken;
     private String tokenType = "Bearer";
+    private String username;
+    private String role;
 
     public AuthResponse() {
     }
@@ -12,6 +14,13 @@ public class AuthResponse {
     public AuthResponse(String accessToken, String refreshToken) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
+    }
+
+    public AuthResponse(String accessToken, String refreshToken, String username, String role) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.username = username;
+        this.role = role;
     }
 
     public String getAccessToken() {
@@ -36,5 +45,21 @@ public class AuthResponse {
 
     public void setTokenType(String tokenType) {
         this.tokenType = tokenType;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 }

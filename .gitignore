@@ -31,3 +31,25 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+supabase.sql
+
+# Common generated / temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+*.class
+*.jar
+*.hprof
+.DS_Store
+Thumbs.db
+
+.env.example

@@ -1,10 +1,13 @@
 package com.quizapp.quizapp.controller;
 
 import com.quizapp.quizapp.config.RoleExtractor;
+import com.quizapp.quizapp.dto.ResultResponse;
 import com.quizapp.quizapp.dto.QuestionResponse;
 import com.quizapp.quizapp.dto.StudentNotificationResponse;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import com.quizapp.quizapp.dto.RenameTestRequest;
 import com.quizapp.quizapp.dto.RankRequest;
@@ -242,7 +245,40 @@ public class TestController {
 
         resultRepository.save(result);
 
-        return ResponseEntity.ok("Your Score: " + score + "/" + questions.size());
+        Map<String, Object> response = new HashMap<>();
+        response.put("testId", request.getTestId());
+        response.put("username", request.getUsername());
+        response.put("score", score);
+        response.put("total", questions.size());
+        response.put("correctCount", score);
+        response.put("submittedAt", result.getSubmittedAt());
+        response.put("testName", test.getTestName());
+        response.put("message", "Your Score: " + score + "/" + questions.size());
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ✅ Unpublish test (Teacher only)
+    @PutMapping("/{testId}/unpublish")
+    public ResponseEntity<?> unpublishTest(@PathVariable int testId,
+                                           @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (!roleExtractor.isTeacher(authHeader)) {
+            return ResponseEntity.status(403).body("Only teachers can unpublish tests");
+        }
+
+        Test test = testRepository.findById(testId).orElse(null);
+        if (test == null) {
+            return ResponseEntity.badRequest().body("Test not found");
+        }
+
+        String username = roleExtractor.extractUsernameFromAuthHeader(authHeader);
+        if (!test.getTeacherUsername().equals(username)) {
+            return ResponseEntity.status(403).body("You cannot unpublish this test");
+        }
+
+        test.setPublished("no");
+        testRepository.save(test);
+        return ResponseEntity.ok("Test unpublished successfully");
     }
 
 
@@ -323,8 +359,19 @@ public class TestController {
         }
 
         // Step 3: Get results sorted by score
-        List<Result> results = resultRepository
-                .findByTestIdOrderByScoreDesc(request.getTestId());
+        List<ResultResponse> results = resultRepository
+            .findByTestIdOrderByScoreDesc(request.getTestId())
+            .stream()
+            .map(result -> new ResultResponse(
+                result.getId(),
+                result.getUsername(),
+                result.getTestId(),
+                test.getTestName(),
+                result.getScore(),
+                result.getTotal(),
+                result.getSubmittedAt()
+            ))
+            .collect(Collectors.toList());
 
         return ResponseEntity.ok(results);
     }
@@ -346,7 +393,18 @@ public class TestController {
             return ResponseEntity.status(403).body("You cannot view results for this test");
         }
 
-        List<Result> results = resultRepository.findByTestId(testId);
+        List<ResultResponse> results = resultRepository.findByTestId(testId)
+            .stream()
+            .map(result -> new ResultResponse(
+                result.getId(),
+                result.getUsername(),
+                result.getTestId(),
+                test.getTestName(),
+                result.getScore(),
+                result.getTotal(),
+                result.getSubmittedAt()
+            ))
+            .collect(Collectors.toList());
         return ResponseEntity.ok(results);
     }
 
@@ -358,7 +416,22 @@ public class TestController {
         }
 
         String username = roleExtractor.extractUsernameFromAuthHeader(authHeader);
-        List<Result> results = resultRepository.findByUsername(username);
+        List<ResultResponse> results = resultRepository.findByUsername(username)
+            .stream()
+            .map(result -> {
+                Test test = testRepository.findById(result.getTestId()).orElse(null);
+                String testName = test != null ? test.getTestName() : "Test " + result.getTestId();
+                return new ResultResponse(
+                    result.getId(),
+                    result.getUsername(),
+                    result.getTestId(),
+                    testName,
+                    result.getScore(),
+                    result.getTotal(),
+                    result.getSubmittedAt()
+                );
+            })
+            .collect(Collectors.toList());
         return ResponseEntity.ok(results);
     }
 }
