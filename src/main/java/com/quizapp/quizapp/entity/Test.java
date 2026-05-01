@@ -22,6 +22,9 @@ public class Test {
 
     private String published;
 
+    @Column(name = "published_at")
+    private java.time.LocalDateTime publishedAt;
+
     // Constructors
     public Test() {}
 
@@ -80,5 +83,13 @@ public class Test {
 
     public void setPublished(String published) {
         this.published = published;
+    }
+
+    public java.time.LocalDateTime getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void setPublishedAt(java.time.LocalDateTime publishedAt) {
+        this.publishedAt = publishedAt;
     }
 }

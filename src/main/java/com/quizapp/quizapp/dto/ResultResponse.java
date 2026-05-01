@@ -11,11 +11,13 @@ public class ResultResponse {
     private int score;
     private int total;
     private LocalDateTime submittedAt;
+    private Integer timeTaken;
+    private String studentName;
 
     public ResultResponse() {
     }
 
-    public ResultResponse(int id, String username, int testId, String testName, int score, int total, LocalDateTime submittedAt) {
+    public ResultResponse(int id, String username, int testId, String testName, int score, int total, LocalDateTime submittedAt, Integer timeTaken, String studentName) {
         this.id = id;
         this.username = username;
         this.testId = testId;
@@ -23,6 +25,8 @@ public class ResultResponse {
         this.score = score;
         this.total = total;
         this.submittedAt = submittedAt;
+        this.timeTaken = timeTaken;
+        this.studentName = studentName;
     }
 
     public int getId() {
@@ -79,5 +83,21 @@ public class ResultResponse {
 
     public void setSubmittedAt(LocalDateTime submittedAt) {
         this.submittedAt = submittedAt;
+    }
+
+    public Integer getTimeTaken() {
+        return timeTaken;
+    }
+
+    public void setTimeTaken(Integer timeTaken) {
+        this.timeTaken = timeTaken;
+    }
+
+    public String getStudentName() {
+        return studentName;
+    }
+
+    public void setStudentName(String studentName) {
+        this.studentName = studentName;
     }
 }

@@ -22,15 +22,19 @@ public class Result {
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
+    @Column(name = "time_taken")
+    private Integer timeTaken;
+
     // Constructors
     public Result() {}
 
-    public Result(String username, int testId, int score, int total, LocalDateTime submittedAt) {
+    public Result(String username, int testId, int score, int total, LocalDateTime submittedAt, Integer timeTaken) {
         this.username = username;
         this.testId = testId;
         this.score = score;
         this.total = total;
         this.submittedAt = submittedAt;
+        this.timeTaken = timeTaken;
     }
 
     // Getters & Setters
@@ -51,4 +55,7 @@ public class Result {
 
     public LocalDateTime getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
+
+    public Integer getTimeTaken() { return timeTaken; }
+    public void setTimeTaken(Integer timeTaken) { this.timeTaken = timeTaken; }
 }

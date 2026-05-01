@@ -6,6 +6,7 @@ public class SubmitRequest {
 
     private int testId;
     private String username; // ✅ Added
+    private Integer timeTaken;
     private Map<Integer, Integer> answers;
 
     public int getTestId() {
@@ -22,6 +23,14 @@ public class SubmitRequest {
 
     public void setUsername(String username) {   // ✅ Setter
         this.username = username;
+    }
+
+    public Integer getTimeTaken() {
+        return timeTaken;
+    }
+
+    public void setTimeTaken(Integer timeTaken) {
+        this.timeTaken = timeTaken;
     }
 
     public Map<Integer, Integer> getAnswers() {

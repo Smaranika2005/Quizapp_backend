@@ -45,6 +45,19 @@ public class TestController {
     @Autowired
     private RoleExtractor roleExtractor;
 
+    @Autowired
+    private com.quizapp.quizapp.repository.UserRepository userRepository;
+
+    private String resolveStudentName(String identifier) {
+        if (userRepository != null) {
+            com.quizapp.quizapp.entity.User user = userRepository.findByIdentifier(identifier);
+            if (user != null && user.getUsername() != null) {
+                return user.getUsername();
+            }
+        }
+        return identifier;
+    }
+
     // ✅ Create Test (Teacher only)
     @PostMapping("/create")
     public ResponseEntity<?> createTest(@RequestBody Test test, @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -123,6 +136,7 @@ public class TestController {
         }
 
         test.setPublished("yes");
+        test.setPublishedAt(java.time.LocalDateTime.now());
         testRepository.save(test);
         return ResponseEntity.ok("Test published successfully");
     }
@@ -140,7 +154,8 @@ public class TestController {
                 .map(test -> new StudentNotificationResponse(
                         test.getId(),
                         "New test published",
-                        "A new test is available: " + test.getTestName()
+                        "A new test is available: " + test.getTestName(),
+                        test.getPublishedAt()
                 ))
                 .collect(Collectors.toList());
 
@@ -152,6 +167,11 @@ public class TestController {
     public ResponseEntity<?> validateTest(@RequestBody TestRequest request, @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (!roleExtractor.isStudent(authHeader)) {
             return ResponseEntity.status(403).body("Only students can attempt tests");
+        }
+
+        String username = roleExtractor.extractUsernameFromAuthHeader(authHeader);
+        if (resultRepository.findByUsernameAndTestId(username, request.getTestId()).isPresent()) {
+            return ResponseEntity.badRequest().body("You have already attempted the test. No further changes are allowed");
         }
 
         Test test = testRepository.findByIdAndPasscode(
@@ -171,6 +191,11 @@ public class TestController {
     public ResponseEntity<?> startTest(@RequestBody TestRequest request, @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (!roleExtractor.isStudent(authHeader)) {
             return ResponseEntity.status(403).body("Only students can attempt tests");
+        }
+
+        String username = roleExtractor.extractUsernameFromAuthHeader(authHeader);
+        if (resultRepository.findByUsernameAndTestId(username, request.getTestId()).isPresent()) {
+            return ResponseEntity.badRequest().body("You have already attempted the test. No further changes are allowed");
         }
 
         Test test = testRepository.findByIdAndPasscode(
@@ -211,6 +236,10 @@ public class TestController {
             return ResponseEntity.status(403).body("Only students can submit tests");
         }
 
+        if (resultRepository.findByUsernameAndTestId(request.getUsername(), request.getTestId()).isPresent()) {
+            return ResponseEntity.badRequest().body("You have already attempted the test. No further changes are allowed");
+        }
+
         Test test = testRepository.findById(request.getTestId()).orElse(null);
         if (test == null) {
             return ResponseEntity.badRequest().body("Test not found");
@@ -242,6 +271,7 @@ public class TestController {
         result.setScore(score);
         result.setTotal(questions.size());
         result.setSubmittedAt(java.time.LocalDateTime.now());
+        result.setTimeTaken(request.getTimeTaken());
 
         resultRepository.save(result);
 
@@ -252,6 +282,7 @@ public class TestController {
         response.put("total", questions.size());
         response.put("correctCount", score);
         response.put("submittedAt", result.getSubmittedAt());
+        response.put("timeTaken", result.getTimeTaken());
         response.put("testName", test.getTestName());
         response.put("message", "Your Score: " + score + "/" + questions.size());
 
@@ -369,7 +400,9 @@ public class TestController {
                 test.getTestName(),
                 result.getScore(),
                 result.getTotal(),
-                result.getSubmittedAt()
+                result.getSubmittedAt(),
+                result.getTimeTaken(),
+                resolveStudentName(result.getUsername())
             ))
             .collect(Collectors.toList());
 
@@ -379,8 +412,8 @@ public class TestController {
     // ✅ Get Test Results (Teacher endpoint - for teacher dashboard)
     @GetMapping("/{testId}/results")
     public ResponseEntity<?> getTestResults(@PathVariable int testId, @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        if (!roleExtractor.isTeacher(authHeader)) {
-            return ResponseEntity.status(403).body("Only teachers can view test results");
+        if (!roleExtractor.isTeacher(authHeader) && !roleExtractor.isStudent(authHeader)) {
+            return ResponseEntity.status(403).body("Unauthorized access");
         }
 
         Test test = testRepository.findById(testId).orElse(null);
@@ -388,9 +421,15 @@ public class TestController {
             return ResponseEntity.badRequest().body("Test not found");
         }
 
-        String username = roleExtractor.extractUsernameFromAuthHeader(authHeader);
-        if (!test.getTeacherUsername().equals(username)) {
-            return ResponseEntity.status(403).body("You cannot view results for this test");
+        if (roleExtractor.isTeacher(authHeader)) {
+            String username = roleExtractor.extractUsernameFromAuthHeader(authHeader);
+            if (!test.getTeacherUsername().equals(username)) {
+                return ResponseEntity.status(403).body("You cannot view results for this test");
+            }
+        } else if (roleExtractor.isStudent(authHeader)) {
+            if (!"yes".equalsIgnoreCase(test.getPublished())) {
+                return ResponseEntity.status(403).body("Test is not published");
+            }
         }
 
         List<ResultResponse> results = resultRepository.findByTestId(testId)
@@ -402,7 +441,9 @@ public class TestController {
                 test.getTestName(),
                 result.getScore(),
                 result.getTotal(),
-                result.getSubmittedAt()
+                result.getSubmittedAt(),
+                result.getTimeTaken(),
+                resolveStudentName(result.getUsername())
             ))
             .collect(Collectors.toList());
         return ResponseEntity.ok(results);
@@ -428,7 +469,9 @@ public class TestController {
                     testName,
                     result.getScore(),
                     result.getTotal(),
-                    result.getSubmittedAt()
+                    result.getSubmittedAt(),
+                    result.getTimeTaken(),
+                    resolveStudentName(result.getUsername())
                 );
             })
             .collect(Collectors.toList());

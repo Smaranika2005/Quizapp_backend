@@ -12,4 +12,6 @@ public interface ResultRepository extends JpaRepository<Result, Integer> {
     List<Result> findByUsername(String username);
 
     List<Result> findByTestId(int testId);
+
+    java.util.Optional<Result> findByUsernameAndTestId(String username, int testId);
 }
