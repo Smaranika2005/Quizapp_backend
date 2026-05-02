@@ -14,6 +14,7 @@ import com.quizapp.quizapp.dto.RankRequest;
 import com.quizapp.quizapp.dto.SubmitRequest;
 import com.quizapp.quizapp.dto.TestRequest;
 import com.quizapp.quizapp.dto.DeleteTestRequest;
+import com.quizapp.quizapp.dto.TestResponse;
 
 import com.quizapp.quizapp.entity.Question;
 import com.quizapp.quizapp.entity.Test;
@@ -77,12 +78,38 @@ public class TestController {
     @GetMapping("/all")
     public ResponseEntity<?> getAllTests(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (roleExtractor.isStudent(authHeader)) {
-            return ResponseEntity.ok(testRepository.findByPublishedIgnoreCase("yes"));
+            List<TestResponse> tests = testRepository.findByPublishedIgnoreCase("yes")
+                .stream()
+                .map(test -> new TestResponse(
+                    test.getId(),
+                    test.getTestName(),
+                    test.getPasscode(),
+                    test.getTeacherUsername(),
+                    resolveStudentName(test.getTeacherUsername()),
+                    test.getDuration(),
+                    test.getPublished(),
+                    test.getPublishedAt()
+                ))
+                .collect(Collectors.toList());
+            return ResponseEntity.ok(tests);
         }
 
         if (roleExtractor.isTeacher(authHeader)) {
             String username = roleExtractor.extractUsernameFromAuthHeader(authHeader);
-            return ResponseEntity.ok(testRepository.findByTeacherUsername(username));
+            List<TestResponse> tests = testRepository.findByTeacherUsername(username)
+                .stream()
+                .map(test -> new TestResponse(
+                    test.getId(),
+                    test.getTestName(),
+                    test.getPasscode(),
+                    test.getTeacherUsername(),
+                    resolveStudentName(test.getTeacherUsername()),
+                    test.getDuration(),
+                    test.getPublished(),
+                    test.getPublishedAt()
+                ))
+                .collect(Collectors.toList());
+            return ResponseEntity.ok(tests);
         }
 
         return ResponseEntity.status(403).body("Unauthorized role");
@@ -95,7 +122,19 @@ public class TestController {
             return ResponseEntity.status(403).body("Only teachers can view their tests");
         }
         String username = roleExtractor.extractUsernameFromAuthHeader(authHeader);
-        List<Test> tests = testRepository.findByTeacherUsername(username);
+        List<TestResponse> tests = testRepository.findByTeacherUsername(username)
+            .stream()
+            .map(test -> new TestResponse(
+                test.getId(),
+                test.getTestName(),
+                test.getPasscode(),
+                test.getTeacherUsername(),
+                resolveStudentName(test.getTeacherUsername()),
+                test.getDuration(),
+                test.getPublished(),
+                test.getPublishedAt()
+            ))
+            .collect(Collectors.toList());
         return ResponseEntity.ok(tests);
     }
 
@@ -105,7 +144,20 @@ public class TestController {
         if (!roleExtractor.isStudent(authHeader)) {
             return ResponseEntity.status(403).body("Only students can view published tests");
         }
-        return ResponseEntity.ok(testRepository.findByPublishedIgnoreCase("yes"));
+        List<TestResponse> tests = testRepository.findByPublishedIgnoreCase("yes")
+            .stream()
+            .map(test -> new TestResponse(
+                test.getId(),
+                test.getTestName(),
+                test.getPasscode(),
+                test.getTeacherUsername(),
+                resolveStudentName(test.getTeacherUsername()),
+                test.getDuration(),
+                test.getPublished(),
+                test.getPublishedAt()
+            ))
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(tests);
     }
 
     // ✅ Publish test (Teacher only)
